@@ -1,4 +1,4 @@
-# App tâches familiales/coloc — Homy projet
+# App tâches familiales/coloc — Spec projet (nom provisoire)
 
 ## Concept
 Une famille ou coloc crée un groupe. Chaque tâche a une **fenêtre de réalisation**
@@ -58,3 +58,21 @@ temps restant / en retard) + tâche + assigné + statut. Clic sur une tâche →
 - Solo dev, pas de deadline fixe
 - Construire phase par phase, valider chaque étape avant la suivante
 - Pas de sur-ingénierie prématurée — MVP d'abord, extensibilité gardée en tête
+
+## Règles de travail (leçons des phases précédentes)
+- Claude Code n'a pas d'accès direct fiable à l'état réel de la base Supabase
+  (pas de service_role, connexion CLI parfois bloquée). Une migration **écrite**
+  dans supabase/migrations/ n'est PAS forcément **appliquée**. Après toute tâche
+  qui touche le schéma : demander le SQL brut, le coller soi-même dans le
+  SQL Editor Supabase, et confirmer visuellement (Table Editor / Database
+  Functions) avant de considérer la tâche terminée.
+- RLS : éviter les policies self-referencing sur une table (ex: policy sur
+  group_members qui interroge group_members) → toujours passer par une fonction
+  SECURITY DEFINER (pattern is_group_member) pour ce genre de check.
+- Navigation expo-router : préférer la navigation impérative (router.replace
+  dans un useEffect classique) à <Redirect> déclaratif, qui s'appuie sur
+  useFocusEffect et peut ne pas se redéclencher de façon fiable après un
+  changement de state hors focus.
+- Pas d'outil de pilotage UI réel dans cet environnement (Claude in Chrome
+  décliné) → tout test end-to-end sur device/Expo Go est fait par Alex, pas
+  par Claude Code. Prévoir ça dans le résumé de chaque phase.

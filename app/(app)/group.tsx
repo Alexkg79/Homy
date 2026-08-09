@@ -1,22 +1,32 @@
-import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 
 import { ErrorText } from '../../components/ErrorText';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { PickerField } from '../../components/PickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ProgressBar } from '../../components/ProgressBar';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useGroupStore } from '../../hooks/useGroupStore';
 import { useTaskStore } from '../../hooks/useTaskStore';
 import {
   combineDateAndTime,
   formatDaySectionHeader,
+  formatTimeFr,
   parseDateOnly,
   toDateOnlyString,
 } from '../../lib/datetime';
-import { computeDerivedStatus, type DerivedInstanceStatus } from '../../lib/task-status';
+import {
+  computeDerivedStatus,
+  computeProgressRatio,
+  progressColor,
+  type DerivedInstanceStatus,
+} from '../../lib/task-status';
 import type { TaskInstance } from '../../types/database';
+
+/** Rafraîchit le statut/la jauge sans repasser par un fetch réseau. */
+const NOW_TICK_MS = 30_000;
 
 const STATUS_LABELS: Record<DerivedInstanceStatus, string> = {
   a_venir: 'À venir',
@@ -52,7 +62,6 @@ export default function GroupHome() {
   const tasks = useTaskStore((state) => state.tasks);
   const instances = useTaskStore((state) => state.instances);
   const isTasksLoading = useTaskStore((state) => state.isLoading);
-  const hasFetchedTasks = useTaskStore((state) => state.hasFetched);
   const tasksError = useTaskStore((state) => state.error);
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
   const completeInstance = useTaskStore((state) => state.completeInstance);
@@ -64,6 +73,7 @@ export default function GroupHome() {
   const [reportDate, setReportDate] = useState(new Date());
   const [reportStart, setReportStart] = useState(new Date());
   const [reportDeadline, setReportDeadline] = useState(new Date());
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (session && (!hasFetchedGroup || members.length === 0)) {
@@ -72,12 +82,28 @@ export default function GroupHome() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Refetch à chaque fois que l'écran regagne le focus (pas seulement au
+  // montage) : sans ça, créer une tâche depuis task-create.tsx puis revenir
+  // en arrière ne rafraîchissait pas la liste tant que l'app n'était pas
+  // redémarrée (group.tsx reste monté dans la stack, son effet de montage
+  // ne se redéclenche pas tout seul). Ici c'est un refetch de données, pas
+  // une navigation, donc pas le piège identifié pour app/index.tsx.
+  useFocusEffect(
+    useCallback(() => {
+      if (group) {
+        fetchTasks(group.id);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [group])
+  );
+
+  // Fait vivre le statut dérivé et la jauge de progression sans dépendre
+  // d'un re-render déclenché par autre chose. Pas de temps réel à la
+  // seconde près : un tick léger suffit (nettoyé au unmount).
   useEffect(() => {
-    if (group && !hasFetchedTasks) {
-      fetchTasks(group.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group]);
+    const id = setInterval(() => setNow(new Date()), NOW_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
 
   const taskById = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks]);
   const memberByUserId = useMemo(
@@ -102,10 +128,18 @@ export default function GroupHome() {
       }
     }
 
+    // Tri explicite plutôt que de compter sur l'ordre de retour de la requête
+    // Supabase + l'ordre d'insertion du Map : jour croissant (aujourd'hui en
+    // premier), puis heure de début croissante dans chaque jour.
+    const sortedDates = Array.from(byDate.keys()).sort((a, b) => a.localeCompare(b));
+
     return {
-      activeSections: Array.from(byDate.entries()).map(([date, data]) => ({
+      activeSections: sortedDates.map((date) => ({
         title: formatDaySectionHeader(date),
-        data,
+        data: byDate
+          .get(date)!
+          .slice()
+          .sort((a, b) => a.window_start.localeCompare(b.window_start)),
       })),
       doneInstances: done.slice().reverse(),
     };
@@ -136,10 +170,12 @@ export default function GroupHome() {
   const renderInstance = (item: TaskInstance) => {
     const task = taskById[item.task_id];
     const assignee = memberByUserId[item.assigned_to];
-    const derived = computeDerivedStatus(item);
+    const derived = computeDerivedStatus(item, now);
     const isAssignee = item.assigned_to === session?.user.id;
-    const canAct = isAssignee && ACTIVE_STATUSES.has(item.status);
+    const isActive = ACTIVE_STATUSES.has(item.status);
+    const canAct = isAssignee && isActive;
     const isReporting = reportingId === item.id;
+    const progressRatio = computeProgressRatio(item, now);
     const reportOrderValid =
       combineDateAndTime(reportDate, reportDeadline) >= combineDateAndTime(reportDate, reportStart);
 
@@ -149,12 +185,16 @@ export default function GroupHome() {
           <Text style={styles.icon}>{task?.icon ?? '•'}</Text>
           <View style={styles.rowInfo}>
             <Text style={styles.title}>{task?.title ?? 'Tâche'}</Text>
-            <Text style={styles.meta}>{assignee?.display_name ?? '—'}</Text>
+            <Text style={styles.meta}>
+              {formatTimeFr(new Date(item.window_start))} · {assignee?.display_name ?? '—'}
+            </Text>
           </View>
           <Text style={[styles.status, { color: STATUS_COLORS[derived] }]}>
             {STATUS_LABELS[derived]}
           </Text>
         </View>
+
+        {isActive && <ProgressBar ratio={progressRatio} color={progressColor(progressRatio)} />}
 
         {canAct && !isReporting && (
           <View style={styles.actions}>

@@ -41,3 +41,9 @@ export function formatDaySectionHeader(dateOnlyString: string): string {
   });
   return capitalize(formatted);
 }
+
+/** Heure au format français informel : "18h00" (pas "18:00"). */
+export function formatTimeFr(d: Date): string {
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getHours()}h${minutes}`;
+}
