@@ -17,6 +17,7 @@ import {
   parseDateOnly,
   toDateOnlyString,
 } from '../../lib/datetime';
+import { registerForPushNotifications } from '../../lib/notifications';
 import {
   computeDerivedStatus,
   computeProgressRatio,
@@ -80,6 +81,16 @@ export default function GroupHome() {
       fetchGroup(session.user.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Demande la permission + enregistre le push token une fois la session
+  // disponible (couvre "au lancement" et "après avoir rejoint/créé un
+  // groupe" : group.tsx est l'écran atteint dans les deux cas). Idempotent
+  // (upsert sur `token`), pas besoin de guard supplémentaire.
+  useEffect(() => {
+    if (session) {
+      registerForPushNotifications();
+    }
   }, [session]);
 
   // Refetch à chaque fois que l'écran regagne le focus (pas seulement au

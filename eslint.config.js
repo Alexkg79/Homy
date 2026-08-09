@@ -7,6 +7,8 @@ module.exports = defineConfig([
   expoConfig,
   eslintConfigPrettier,
   {
-    ignores: ['dist/*'],
+    // Runtime Deno, pas Node/RN : globals et résolution de modules différents
+    // (imports esm.sh), pas le projet TS de l'app.
+    ignores: ['dist/*', 'supabase/functions/**'],
   },
 ]);

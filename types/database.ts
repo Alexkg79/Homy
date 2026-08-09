@@ -72,6 +72,14 @@ type TaskInstanceRow = {
   updated_at: string;
 };
 
+type PushTokenRow = {
+  id: string;
+  user_id: string;
+  token: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Views: Record<string, never>;
@@ -119,6 +127,21 @@ export type Database = {
         >;
         Relationships: [];
       };
+      // Pas de notifications_log ici : RLS deny-all côté client (aucune
+      // policy), seul service_role y accède depuis l'Edge Function — pas
+      // besoin d'un type que l'app n'utilisera jamais.
+      //
+      // Insert/Update présents pour la forme (comme tasks), mais écriture
+      // réelle uniquement via la RPC register_push_token : un upsert direct
+      // client ne peut pas gérer la réattribution d'un token existant à un
+      // autre utilisateur (device partagé) sous RLS. SELECT/DELETE restent
+      // directs (own-row, pas de souci d'ownership croisé).
+      push_tokens: {
+        Row: PushTokenRow;
+        Insert: Partial<PushTokenRow> & Pick<PushTokenRow, 'user_id' | 'token'>;
+        Update: Partial<Pick<PushTokenRow, 'user_id' | 'token'>>;
+        Relationships: [];
+      };
     };
     Functions: {
       create_group: {
@@ -148,6 +171,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: null;
       };
+      register_push_token: {
+        Args: { p_token: string };
+        Returns: null;
+      };
     };
   };
 };
@@ -156,3 +183,4 @@ export type Group = GroupRow;
 export type GroupMember = GroupMemberRow;
 export type Task = TaskRow;
 export type TaskInstance = TaskInstanceRow;
+export type PushToken = PushTokenRow;
