@@ -1,4 +1,4 @@
-# App tâches familiales/coloc — Spec projet (nom provisoire)
+# App tâches familiales/coloc — Homy projet
 
 ## Concept
 Une famille ou coloc crée un groupe. Chaque tâche a une **fenêtre de réalisation**
