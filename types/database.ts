@@ -4,9 +4,13 @@
  * est écrit à la main à partir des migrations SQL (supabase/migrations/).
  *
  * Note : `groups` et `group_members` n'ont volontairement pas de policy RLS
- * INSERT/UPDATE (les écritures passent par les fonctions RPC create_group /
- * join_group). Les types Insert/Update reflètent quand même la forme réelle
- * des tables : c'est RLS, pas TypeScript, qui empêche les écritures directes.
+ * INSERT (les créations passent par les fonctions RPC create_group /
+ * join_group). group_members a en revanche des policies UPDATE/DELETE
+ * directes, mais limitées à la ligne de l'appelant (quitter le groupe,
+ * modifier son propre nom affiché — voir
+ * 20260810100000_group_leave_and_task_management.sql). Les types Insert/
+ * Update reflètent quand même la forme réelle des tables : c'est RLS, pas
+ * TypeScript, qui empêche les écritures non autorisées.
  *
  * Une fois le projet lié (`supabase link --project-ref <ref>`), régénère avec :
  *   npx supabase gen types typescript --linked > types/database.ts
@@ -173,6 +177,18 @@ export type Database = {
       };
       register_push_token: {
         Args: { p_token: string };
+        Returns: null;
+      };
+      update_recurring_task: {
+        Args: {
+          p_task_id: string;
+          p_assigned_to: string | null;
+          p_recurrence_rule: RecurrenceRule | null;
+        };
+        Returns: TaskRow;
+      };
+      delete_task: {
+        Args: { p_task_id: string };
         Returns: null;
       };
     };

@@ -47,3 +47,31 @@ export function formatTimeFr(d: Date): string {
   const minutes = String(d.getMinutes()).padStart(2, '0');
   return `${d.getHours()}h${minutes}`;
 }
+
+/**
+ * Durée restante au format "1h32" / "45min" (même convention que
+ * formatTimeFr, sans espace). `ms` négatif est clampé à 0 plutôt que de
+ * laisser passer un texte du type "-1h32" côté appelant.
+ */
+export function formatRemainingTime(ms: number): string {
+  const totalMinutes = Math.max(0, Math.round(ms / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return `${minutes}min`;
+  }
+  return `${hours}h${String(minutes).padStart(2, '0')}`;
+}
+
+/** "HH:MM" (ex: recurrence_rule.window_start_time) -> Date du jour courant. */
+export function parseTimeString(hhmm: string): Date {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+/** Inverse de parseTimeString : Date -> "HH:MM" (heures/minutes locales). */
+export function toTimeOnlyString(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}

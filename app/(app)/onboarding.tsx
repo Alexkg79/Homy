@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -6,15 +6,18 @@ import { ErrorText } from '../../components/ErrorText';
 import { FormInput } from '../../components/FormInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useGroupStore } from '../../hooks/useGroupStore';
+import { useTheme } from '../../hooks/useTheme';
 
 type Mode = 'create' | 'join';
 
 export default function Onboarding() {
+  const { colors } = useTheme();
   const [mode, setMode] = useState<Mode>('create');
   const [displayName, setDisplayName] = useState('');
   const [groupName, setGroupName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
+  const groups = useGroupStore((state) => state.groups);
   const createGroup = useGroupStore((state) => state.createGroup);
   const joinGroup = useGroupStore((state) => state.joinGroup);
   const isSubmitting = useGroupStore((state) => state.isSubmitting);
@@ -33,40 +36,61 @@ export default function Onboarding() {
         : await joinGroup(inviteCode, displayName);
 
     if (success) {
-      // Redirection explicite plutôt que de compter uniquement sur la
-      // logique centralisée de app/index.tsx : plus direct, et robuste même
-      // si ce fix venait à régresser (cf. hooks/useGroupStore.ts, group.tsx
-      // re-fetch de toute façon les membres au montage si hasFetched=false).
-      router.replace('/(app)/group');
+      // Deux points d'entrée possibles désormais : gate initial (zéro
+      // groupe, "/(app)/onboarding" remplace "/" dans l'historique, donc pas
+      // de retour possible) ou ouvert depuis le sélecteur de groupe alors
+      // qu'on a déjà au moins un groupe (poussé par-dessus les tabs, donc un
+      // retour existe). Même pattern de navigation impérative que le reste
+      // de l'app, pas de <Redirect>.
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(app)/(tabs)');
+      }
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <Stack.Screen
+        options={{ title: groups.length > 0 ? 'Ajouter un groupe' : 'Rejoindre un groupe' }}
+      />
       <View style={styles.content}>
-        <View style={styles.tabs}>
+        <View style={[styles.tabs, { backgroundColor: colors.backgroundMuted }]}>
           <Pressable
-            style={[styles.tab, mode === 'create' && styles.tabActive]}
+            style={[styles.tab, mode === 'create' && { backgroundColor: colors.card }]}
             onPress={() => {
               setMode('create');
               clearError();
             }}
           >
-            <Text style={[styles.tabLabel, mode === 'create' && styles.tabLabelActive]}>
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.textMuted },
+                mode === 'create' && { color: colors.accent },
+              ]}
+            >
               Créer un groupe
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.tab, mode === 'join' && styles.tabActive]}
+            style={[styles.tab, mode === 'join' && { backgroundColor: colors.card }]}
             onPress={() => {
               setMode('join');
               clearError();
             }}
           >
-            <Text style={[styles.tabLabel, mode === 'join' && styles.tabLabelActive]}>
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: colors.textMuted },
+                mode === 'join' && { color: colors.accent },
+              ]}
+            >
               Rejoindre un groupe
             </Text>
           </Pressable>
@@ -77,6 +101,11 @@ export default function Onboarding() {
           value={displayName}
           onChangeText={setDisplayName}
           autoCapitalize="words"
+          labelColor={colors.textPrimary}
+          borderColor={colors.border}
+          backgroundColor={colors.inputBackground}
+          textColor={colors.textPrimary}
+          placeholderColor={colors.placeholder}
         />
 
         {mode === 'create' ? (
@@ -86,6 +115,11 @@ export default function Onboarding() {
             onChangeText={setGroupName}
             autoCapitalize="words"
             placeholder="Ex: Maison Dupont"
+            labelColor={colors.textPrimary}
+            borderColor={colors.border}
+            backgroundColor={colors.inputBackground}
+            textColor={colors.textPrimary}
+            placeholderColor={colors.placeholder}
           />
         ) : (
           <FormInput
@@ -95,10 +129,15 @@ export default function Onboarding() {
             autoCapitalize="characters"
             placeholder="Ex: AB23CD"
             maxLength={6}
+            labelColor={colors.textPrimary}
+            borderColor={colors.border}
+            backgroundColor={colors.inputBackground}
+            textColor={colors.textPrimary}
+            placeholderColor={colors.placeholder}
           />
         )}
 
-        <ErrorText>{error}</ErrorText>
+        <ErrorText color={colors.danger}>{error}</ErrorText>
 
         <PrimaryButton
           label={mode === 'create' ? 'Créer le groupe' : 'Rejoindre le groupe'}
@@ -114,7 +153,6 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
@@ -124,7 +162,6 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#F0F2F5',
     borderRadius: 10,
     padding: 4,
     marginBottom: 8,
@@ -135,15 +172,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  tabActive: {
-    backgroundColor: '#fff',
-  },
   tabLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
-  },
-  tabLabelActive: {
-    color: '#2F6FED',
   },
 });

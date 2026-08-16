@@ -12,11 +12,14 @@ import {
 
 import { ErrorText } from '../../components/ErrorText';
 import { FormInput } from '../../components/FormInput';
+import { IconPickerField } from '../../components/IconPickerField';
 import { PickerField } from '../../components/PickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import type { TaskIconName } from '../../constants/taskIcons';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useGroupStore } from '../../hooks/useGroupStore';
 import { useTaskStore } from '../../hooks/useTaskStore';
+import { useTheme } from '../../hooks/useTheme';
 import { combineDateAndTime, toDateOnlyString } from '../../lib/datetime';
 import type { TaskType } from '../../types/database';
 
@@ -48,8 +51,10 @@ function toTimeString(d: Date): string {
 }
 
 export default function TaskCreate() {
-  const group = useGroupStore((state) => state.group);
-  const members = useGroupStore((state) => state.members);
+  const { colors } = useTheme();
+  const activeGroupId = useGroupStore((state) => state.activeGroupId);
+  const membersByGroupId = useGroupStore((state) => state.membersByGroupId);
+  const members = activeGroupId ? (membersByGroupId[activeGroupId] ?? []) : [];
   const session = useAuthStore((state) => state.session);
   const createTask = useTaskStore((state) => state.createTask);
   const isSubmitting = useTaskStore((state) => state.isSubmitting);
@@ -57,7 +62,7 @@ export default function TaskCreate() {
   const clearError = useTaskStore((state) => state.clearError);
 
   const [title, setTitle] = useState('');
-  const [icon, setIcon] = useState('');
+  const [icon, setIcon] = useState<TaskIconName | ''>('');
   const [type, setType] = useState<TaskType>('ponctuelle');
   const [assignedTo, setAssignedTo] = useState<string | null>(session?.user.id ?? null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -87,7 +92,7 @@ export default function TaskCreate() {
     (type === 'ponctuelle' || selectedDays.length > 0);
 
   const handleSubmit = async () => {
-    if (!group || !assignedTo || !canSubmit) {
+    if (!activeGroupId || !assignedTo || !canSubmit) {
       return;
     }
     clearError();
@@ -96,7 +101,7 @@ export default function TaskCreate() {
     const success =
       type === 'ponctuelle'
         ? await createTask({
-            groupId: group.id,
+            groupId: activeGroupId,
             title,
             icon,
             type,
@@ -108,7 +113,7 @@ export default function TaskCreate() {
             deadline: combineDateAndTime(date, deadlineTime).toISOString(),
           })
         : await createTask({
-            groupId: group.id,
+            groupId: activeGroupId,
             title,
             icon,
             type,
@@ -133,7 +138,7 @@ export default function TaskCreate() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.content}>
@@ -142,25 +147,34 @@ export default function TaskCreate() {
           value={title}
           onChangeText={setTitle}
           placeholder="Ex: Vaisselle"
+          labelColor={colors.textPrimary}
+          borderColor={colors.border}
+          backgroundColor={colors.inputBackground}
+          textColor={colors.textPrimary}
+          placeholderColor={colors.placeholder}
         />
-        <FormInput
-          label="Icône (emoji)"
-          value={icon}
-          onChangeText={setIcon}
-          placeholder="🧹"
-          maxLength={4}
-        />
+        <IconPickerField label="Icône" value={icon} onChange={setIcon} colors={colors} />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Type</Text>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Type</Text>
           <View style={styles.row}>
             {TYPES.map((t) => (
               <Pressable
                 key={t.value}
-                style={[styles.chip, type === t.value && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  { backgroundColor: colors.backgroundMuted },
+                  type === t.value && { backgroundColor: colors.accent },
+                ]}
                 onPress={() => setType(t.value)}
               >
-                <Text style={[styles.chipLabel, type === t.value && styles.chipLabelActive]}>
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    { color: colors.textMuted },
+                    type === t.value && { color: colors.accentContrast },
+                  ]}
+                >
                   {t.label}
                 </Text>
               </Pressable>
@@ -169,16 +183,24 @@ export default function TaskCreate() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Assigné à</Text>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Assigné à</Text>
           <View style={styles.row}>
             {members.map((m) => (
               <Pressable
                 key={m.id}
-                style={[styles.chip, assignedTo === m.user_id && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  { backgroundColor: colors.backgroundMuted },
+                  assignedTo === m.user_id && { backgroundColor: colors.accent },
+                ]}
                 onPress={() => setAssignedTo(m.user_id)}
               >
                 <Text
-                  style={[styles.chipLabel, assignedTo === m.user_id && styles.chipLabelActive]}
+                  style={[
+                    styles.chipLabel,
+                    { color: colors.textMuted },
+                    assignedTo === m.user_id && { color: colors.accentContrast },
+                  ]}
                 >
                   {m.display_name}
                 </Text>
@@ -188,21 +210,35 @@ export default function TaskCreate() {
         </View>
 
         {type === 'ponctuelle' ? (
-          <PickerField label="Date" value={date} mode="date" onChange={setDate} />
+          <PickerField
+            label="Date"
+            value={date}
+            mode="date"
+            onChange={setDate}
+            labelColor={colors.textPrimary}
+            borderColor={colors.border}
+            backgroundColor={colors.inputBackground}
+            valueColor={colors.textPrimary}
+          />
         ) : (
           <View style={styles.field}>
-            <Text style={styles.label}>Jours de la semaine</Text>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>Jours de la semaine</Text>
             <View style={styles.row}>
               {DAYS.map((d) => (
                 <Pressable
                   key={d.value}
-                  style={[styles.chip, selectedDays.includes(d.value) && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.backgroundMuted },
+                    selectedDays.includes(d.value) && { backgroundColor: colors.accent },
+                  ]}
                   onPress={() => toggleDay(d.value)}
                 >
                   <Text
                     style={[
                       styles.chipLabel,
-                      selectedDays.includes(d.value) && styles.chipLabelActive,
+                      { color: colors.textMuted },
+                      selectedDays.includes(d.value) && { color: colors.accentContrast },
                     ]}
                   >
                     {d.label}
@@ -218,6 +254,10 @@ export default function TaskCreate() {
           value={windowStartTime}
           mode="time"
           onChange={setWindowStartTime}
+          labelColor={colors.textPrimary}
+          borderColor={colors.border}
+          backgroundColor={colors.inputBackground}
+          valueColor={colors.textPrimary}
         />
         <FormInput
           label="Durée disponible (minutes)"
@@ -225,13 +265,29 @@ export default function TaskCreate() {
           onChangeText={setDurationMinutes}
           placeholder="60"
           keyboardType="number-pad"
+          labelColor={colors.textPrimary}
+          borderColor={colors.border}
+          backgroundColor={colors.inputBackground}
+          textColor={colors.textPrimary}
+          placeholderColor={colors.placeholder}
         />
-        <PickerField label="Deadline" value={deadlineTime} mode="time" onChange={setDeadlineTime} />
+        <PickerField
+          label="Deadline"
+          value={deadlineTime}
+          mode="time"
+          onChange={setDeadlineTime}
+          labelColor={colors.textPrimary}
+          borderColor={colors.border}
+          backgroundColor={colors.inputBackground}
+          valueColor={colors.textPrimary}
+        />
         {!windowOrderValid && (
-          <Text style={styles.hint}>La deadline doit être après le début de la fenêtre.</Text>
+          <Text style={[styles.hint, { color: colors.danger }]}>
+            La deadline doit être après le début de la fenêtre.
+          </Text>
         )}
 
-        <ErrorText>{error}</ErrorText>
+        <ErrorText color={colors.danger}>{error}</ErrorText>
 
         <PrimaryButton
           label="Créer la tâche"
@@ -247,7 +303,6 @@ export default function TaskCreate() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   content: {
     padding: 24,
@@ -259,7 +314,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
   },
   row: {
     flexDirection: 'row',
@@ -270,21 +324,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#F0F2F5',
-  },
-  chipActive: {
-    backgroundColor: '#2F6FED',
   },
   chipLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
-  },
-  chipLabelActive: {
-    color: '#fff',
   },
   hint: {
     fontSize: 13,
-    color: '#D64545',
   },
 });

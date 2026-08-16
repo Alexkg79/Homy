@@ -6,7 +6,7 @@ import { useAuthStore } from '../hooks/useAuthStore';
 import { useGroupStore } from '../hooks/useGroupStore';
 
 /**
- * Contrôleur de redirection centralisé (session → groupe → écran). Navigue
+ * Contrôleur de redirection centralisé (session → groupes → écran). Navigue
  * de façon impérative via useEffect plutôt qu'avec <Redirect> : <Redirect>
  * s'appuie sur useFocusEffect en interne, qui ne se redéclenche que quand cet
  * écran regagne le focus — insuffisant ici, où l'état groupe change pendant
@@ -15,10 +15,10 @@ import { useGroupStore } from '../hooks/useGroupStore';
  */
 export default function Index() {
   const session = useAuthStore((state) => state.session);
-  const group = useGroupStore((state) => state.group);
-  const isGroupLoading = useGroupStore((state) => state.isLoading);
+  const groups = useGroupStore((state) => state.groups);
+  const isGroupsLoading = useGroupStore((state) => state.isLoading);
   const hasFetched = useGroupStore((state) => state.hasFetched);
-  const fetchGroup = useGroupStore((state) => state.fetchGroup);
+  const fetchGroups = useGroupStore((state) => state.fetchGroups);
 
   useEffect(() => {
     if (!session) {
@@ -26,17 +26,17 @@ export default function Index() {
       return;
     }
 
-    if (!hasFetched && !isGroupLoading) {
-      fetchGroup(session.user.id);
+    if (!hasFetched && !isGroupsLoading) {
+      fetchGroups(session.user.id);
       return;
     }
 
-    if (isGroupLoading || !hasFetched) {
+    if (isGroupsLoading || !hasFetched) {
       return;
     }
 
-    router.replace(group ? '/(app)/group' : '/(app)/onboarding');
-  }, [session, group, hasFetched, isGroupLoading, fetchGroup]);
+    router.replace(groups.length > 0 ? '/(app)/(tabs)' : '/(app)/onboarding');
+  }, [session, groups, hasFetched, isGroupsLoading, fetchGroups]);
 
   return <LoadingScreen />;
 }

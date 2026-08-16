@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useThemeStore } from '../hooks/useThemeStore';
 
 export default function RootLayout() {
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -11,6 +12,10 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = useAuthStore.getState().init();
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    useThemeStore.getState().init();
   }, []);
 
   return (

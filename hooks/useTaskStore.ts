@@ -22,6 +22,14 @@ interface PostponeParams {
   deadline: string;
 }
 
+interface UpdateRecurringTaskParams {
+  taskId: string;
+  // null = ne pas modifier ce champ (même sémantique que les paramètres par
+  // défaut de la RPC update_recurring_task).
+  assignedTo: string | null;
+  recurrenceRule: RecurrenceRule | null;
+}
+
 interface TaskState {
   tasks: Task[];
   instances: TaskInstance[];
@@ -29,11 +37,13 @@ interface TaskState {
   hasFetched: boolean;
   isSubmitting: boolean;
   error: string | null;
-  fetchTasks: (groupId: string) => Promise<void>;
+  fetchTasks: (groupIds: string[]) => Promise<void>;
   createTask: (params: CreateTaskParams) => Promise<boolean>;
   completeInstance: (instanceId: string) => Promise<boolean>;
   refuseInstance: (instanceId: string) => Promise<boolean>;
   postponeInstance: (instanceId: string, params: PostponeParams) => Promise<boolean>;
+  updateRecurringTask: (params: UpdateRecurringTaskParams) => Promise<boolean>;
+  deleteTask: (taskId: string) => Promise<boolean>;
   reset: () => void;
   clearError: () => void;
 }
@@ -46,8 +56,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   isSubmitting: false,
   error: null,
 
-  fetchTasks: async (groupId) => {
+  fetchTasks: async (groupIds) => {
     set({ isLoading: true, error: null });
+
+    if (groupIds.length === 0) {
+      set({ tasks: [], instances: [], isLoading: false, hasFetched: true });
+      return;
+    }
 
     // Best-effort : régénère les occurrences manquantes des tâches
     // récurrentes avant de lire la liste. Pas bloquant si ça échoue, la
@@ -57,7 +72,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
-      .eq('group_id', groupId)
+      .in('group_id', groupIds)
       .order('created_at', { ascending: false });
 
     if (tasksError) {
@@ -172,6 +187,43 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
 
     set({ instances: get().instances.map((i) => (i.id === instanceId ? data : i)) });
+    return true;
+  },
+
+  updateRecurringTask: async (params) => {
+    set({ isSubmitting: true, error: null });
+    const { data, error } = await callRpc('update_recurring_task', {
+      p_task_id: params.taskId,
+      p_assigned_to: params.assignedTo,
+      p_recurrence_rule: params.recurrenceRule,
+    });
+    set({ isSubmitting: false });
+
+    if (error || !data) {
+      set({ error: error?.message ?? 'Erreur lors de la mise à jour de la tâche.' });
+      return false;
+    }
+
+    // hasFetched: false pour refetch les instances : un changement d'assigné
+    // touche des task_instances existantes, pas seulement la ligne `tasks`.
+    set({ tasks: get().tasks.map((t) => (t.id === data.id ? data : t)), hasFetched: false });
+    return true;
+  },
+
+  deleteTask: async (taskId) => {
+    set({ isSubmitting: true, error: null });
+    const { error } = await callRpc('delete_task', { p_task_id: taskId });
+    set({ isSubmitting: false });
+
+    if (error) {
+      set({ error: error.message });
+      return false;
+    }
+
+    set({
+      tasks: get().tasks.filter((t) => t.id !== taskId),
+      instances: get().instances.filter((i) => i.task_id !== taskId),
+    });
     return true;
   },
 
