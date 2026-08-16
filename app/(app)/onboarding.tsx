@@ -1,17 +1,22 @@
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorText } from '../../components/ErrorText';
 import { FormInput } from '../../components/FormInput';
+import { ModalHeader } from '../../components/ModalHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { fonts } from '../../constants/typography';
 import { useGroupStore } from '../../hooks/useGroupStore';
 import { useTheme } from '../../hooks/useTheme';
+import { withPressedOpacity } from '../../lib/pressedStyle';
 
 type Mode = 'create' | 'join';
 
 export default function Onboarding() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('create');
   const [displayName, setDisplayName] = useState('');
   const [groupName, setGroupName] = useState('');
@@ -55,13 +60,18 @@ export default function Onboarding() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Stack.Screen
-        options={{ title: groups.length > 0 ? 'Ajouter un groupe' : 'Rejoindre un groupe' }}
+      <ModalHeader
+        title={groups.length > 0 ? 'Ajouter un groupe' : 'Rejoindre un groupe'}
+        paddingTop={insets.top + 16}
       />
       <View style={styles.content}>
         <View style={[styles.tabs, { backgroundColor: colors.backgroundMuted }]}>
           <Pressable
-            style={[styles.tab, mode === 'create' && { backgroundColor: colors.card }]}
+            style={({ pressed }) => [
+              styles.tab,
+              mode === 'create' && { backgroundColor: colors.card },
+              withPressedOpacity(pressed),
+            ]}
             onPress={() => {
               setMode('create');
               clearError();
@@ -78,7 +88,11 @@ export default function Onboarding() {
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.tab, mode === 'join' && { backgroundColor: colors.card }]}
+            style={({ pressed }) => [
+              styles.tab,
+              mode === 'join' && { backgroundColor: colors.card },
+              withPressedOpacity(pressed),
+            ]}
             onPress={() => {
               setMode('join');
               clearError();
@@ -144,6 +158,8 @@ export default function Onboarding() {
           onPress={handleSubmit}
           loading={isSubmitting}
           disabled={!canSubmit}
+          backgroundColor={colors.accent}
+          textColor={colors.accentContrast}
         />
       </View>
     </KeyboardAvoidingView>
@@ -174,6 +190,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

@@ -1,3 +1,10 @@
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,6 +15,12 @@ import { useThemeStore } from '../hooks/useThemeStore';
 
 export default function RootLayout() {
   const isInitialized = useAuthStore((state) => state.isInitialized);
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+  });
 
   useEffect(() => {
     const unsubscribe = useAuthStore.getState().init();
@@ -18,9 +31,11 @@ export default function RootLayout() {
     useThemeStore.getState().init();
   }, []);
 
+  const ready = isInitialized && (fontsLoaded || fontError);
+
   return (
     <SafeAreaProvider>
-      {isInitialized ? <Stack screenOptions={{ headerShown: false }} /> : <LoadingScreen />}
+      {ready ? <Stack screenOptions={{ headerShown: false }} /> : <LoadingScreen />}
     </SafeAreaProvider>
   );
 }

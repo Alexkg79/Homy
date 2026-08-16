@@ -2,6 +2,9 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { fonts } from '../constants/typography';
+import { withPressedOpacity } from '../lib/pressedStyle';
+
 interface PickerFieldProps {
   label: string;
   value: Date;
@@ -61,7 +64,10 @@ export function PickerField({
   return (
     <View style={styles.container}>
       <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
-      <Pressable style={[styles.button, { borderColor, backgroundColor }]} onPress={handlePress}>
+      <Pressable
+        style={({ pressed }) => [styles.button, { borderColor, backgroundColor }, withPressedOpacity(pressed)]}
+        onPress={handlePress}
+      >
         <Text style={[styles.buttonLabel, { color: valueColor }]}>{displayValue}</Text>
       </Pressable>
       {Platform.OS === 'ios' && showPicker && (
@@ -85,7 +91,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   button: {
     borderWidth: 1,
@@ -95,5 +101,6 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: 16,
+    fontFamily: fonts.regular,
   },
 });

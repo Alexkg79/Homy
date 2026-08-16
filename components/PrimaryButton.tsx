@@ -1,5 +1,8 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
+import { fonts } from '../constants/typography';
+import { withPressedOpacity } from '../lib/pressedStyle';
+
 interface PrimaryButtonProps {
   label: string;
   onPress: () => void;
@@ -7,8 +10,16 @@ interface PrimaryButtonProps {
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
   style?: ViewStyle;
+  backgroundColor?: string;
+  textColor?: string;
 }
 
+/**
+ * Couleurs par défaut = charte fixe des écrans d'auth (sign-in, sign-up),
+ * seuls écrans restants hors thème (voir FormInput). Les autres écrans
+ * (onboarding, task-create) passent colors.accent/accentContrast du thème
+ * actif explicitement.
+ */
 export function PrimaryButton({
   label,
   onPress,
@@ -16,6 +27,8 @@ export function PrimaryButton({
   disabled = false,
   variant = 'primary',
   style,
+  backgroundColor = '#2F6FED',
+  textColor = '#fff',
 }: PrimaryButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -23,17 +36,21 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[
+      style={({ pressed }) => [
         styles.button,
-        variant === 'secondary' && styles.secondary,
+        variant === 'primary' && { backgroundColor },
+        variant === 'secondary' && [styles.secondary, { borderColor: backgroundColor }],
         isDisabled && styles.disabled,
         style,
+        withPressedOpacity(pressed),
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? '#2F6FED' : '#fff'} />
+        <ActivityIndicator color={variant === 'secondary' ? backgroundColor : textColor} />
       ) : (
-        <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>
+        <Text
+          style={[styles.label, { color: variant === 'secondary' ? backgroundColor : textColor }]}
+        >
           {label}
         </Text>
       )}
@@ -43,7 +60,6 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#2F6FED',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -52,17 +68,12 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#2F6FED',
   },
   disabled: {
     opacity: 0.5,
   },
   label: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryLabel: {
-    color: '#2F6FED',
+    fontFamily: fonts.semiBold,
   },
 });

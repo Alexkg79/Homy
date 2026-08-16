@@ -9,24 +9,33 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorText } from '../../components/ErrorText';
 import { FormInput } from '../../components/FormInput';
 import { IconPickerField } from '../../components/IconPickerField';
+import { ModalHeader } from '../../components/ModalHeader';
 import { PickerField } from '../../components/PickerField';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import type { TaskIconName } from '../../constants/taskIcons';
+import { fonts } from '../../constants/typography';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useGroupStore } from '../../hooks/useGroupStore';
 import { useTaskStore } from '../../hooks/useTaskStore';
 import { useTheme } from '../../hooks/useTheme';
 import { combineDateAndTime, toDateOnlyString } from '../../lib/datetime';
-import type { TaskType } from '../../types/database';
+import { withPressedOpacity } from '../../lib/pressedStyle';
+import type { TaskPriority, TaskType } from '../../types/database';
 
 const TYPES: { label: string; value: TaskType }[] = [
   { label: 'Ponctuelle', value: 'ponctuelle' },
   { label: 'Récurrente', value: 'recurrente' },
   { label: 'Rotation', value: 'rotation' },
+];
+
+const PRIORITIES: { label: string; value: TaskPriority }[] = [
+  { label: 'Normale', value: 'normale' },
+  { label: 'Urgente', value: 'urgente' },
 ];
 
 // Convention JS Date.getDay() / Postgres extract(dow from ...) : 0 = dimanche.
@@ -52,6 +61,7 @@ function toTimeString(d: Date): string {
 
 export default function TaskCreate() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const activeGroupId = useGroupStore((state) => state.activeGroupId);
   const membersByGroupId = useGroupStore((state) => state.membersByGroupId);
   const members = activeGroupId ? (membersByGroupId[activeGroupId] ?? []) : [];
@@ -64,6 +74,7 @@ export default function TaskCreate() {
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState<TaskIconName | ''>('');
   const [type, setType] = useState<TaskType>('ponctuelle');
+  const [priority, setPriority] = useState<TaskPriority>('normale');
   const [assignedTo, setAssignedTo] = useState<string | null>(session?.user.id ?? null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [date, setDate] = useState(new Date());
@@ -111,6 +122,7 @@ export default function TaskCreate() {
             windowStart: combineDateAndTime(date, windowStartTime).toISOString(),
             windowDurationMinutes: Number(durationMinutes),
             deadline: combineDateAndTime(date, deadlineTime).toISOString(),
+            priority,
           })
         : await createTask({
             groupId: activeGroupId,
@@ -129,6 +141,7 @@ export default function TaskCreate() {
             windowStart: null,
             windowDurationMinutes: null,
             deadline: null,
+            priority,
           });
 
     if (success) {
@@ -141,6 +154,7 @@ export default function TaskCreate() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <ModalHeader title="Nouvelle tâche" paddingTop={insets.top + 16} />
       <ScrollView contentContainerStyle={styles.content}>
         <FormInput
           label="Titre"
@@ -161,10 +175,11 @@ export default function TaskCreate() {
             {TYPES.map((t) => (
               <Pressable
                 key={t.value}
-                style={[
+                style={({ pressed }) => [
                   styles.chip,
                   { backgroundColor: colors.backgroundMuted },
                   type === t.value && { backgroundColor: colors.accent },
+                  withPressedOpacity(pressed),
                 ]}
                 onPress={() => setType(t.value)}
               >
@@ -183,15 +198,48 @@ export default function TaskCreate() {
         </View>
 
         <View style={styles.field}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Priorité</Text>
+          <View style={styles.row}>
+            {PRIORITIES.map((p) => {
+              const selected = priority === p.value;
+              const selectedColor = p.value === 'urgente' ? colors.danger : colors.accent;
+              return (
+                <Pressable
+                  key={p.value}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    { backgroundColor: colors.backgroundMuted },
+                    selected && { backgroundColor: selectedColor },
+                    withPressedOpacity(pressed),
+                  ]}
+                  onPress={() => setPriority(p.value)}
+                >
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      { color: colors.textMuted },
+                      selected && { color: colors.accentContrast },
+                    ]}
+                  >
+                    {p.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
           <Text style={[styles.label, { color: colors.textPrimary }]}>Assigné à</Text>
           <View style={styles.row}>
             {members.map((m) => (
               <Pressable
                 key={m.id}
-                style={[
+                style={({ pressed }) => [
                   styles.chip,
                   { backgroundColor: colors.backgroundMuted },
                   assignedTo === m.user_id && { backgroundColor: colors.accent },
+                  withPressedOpacity(pressed),
                 ]}
                 onPress={() => setAssignedTo(m.user_id)}
               >
@@ -227,10 +275,11 @@ export default function TaskCreate() {
               {DAYS.map((d) => (
                 <Pressable
                   key={d.value}
-                  style={[
+                  style={({ pressed }) => [
                     styles.chip,
                     { backgroundColor: colors.backgroundMuted },
                     selectedDays.includes(d.value) && { backgroundColor: colors.accent },
+                    withPressedOpacity(pressed),
                   ]}
                   onPress={() => toggleDay(d.value)}
                 >
@@ -294,6 +343,8 @@ export default function TaskCreate() {
           onPress={handleSubmit}
           loading={isSubmitting}
           disabled={!canSubmit}
+          backgroundColor={colors.accent}
+          textColor={colors.accentContrast}
         />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -313,7 +364,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   row: {
     flexDirection: 'row',
@@ -327,9 +378,10 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   hint: {
     fontSize: 13,
+    fontFamily: fonts.regular,
   },
 });

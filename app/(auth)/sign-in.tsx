@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { ErrorText } from '../../components/ErrorText';
 import { FormInput } from '../../components/FormInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { fonts } from '../../constants/typography';
 import { useAuthStore } from '../../hooks/useAuthStore';
 
 export default function SignIn() {
@@ -79,11 +80,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: fonts.regular,
     color: '#666',
     textAlign: 'center',
     marginBottom: 8,
@@ -94,6 +96,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: '#2F6FED',
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

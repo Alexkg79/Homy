@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import { callRpc, supabase } from '../lib/supabase';
-import type { RecurrenceRule, Task, TaskInstance, TaskType } from '../types/database';
+import type { RecurrenceRule, Task, TaskInstance, TaskPriority, TaskType } from '../types/database';
 
 interface CreateTaskParams {
   groupId: string;
@@ -14,6 +14,7 @@ interface CreateTaskParams {
   windowStart: string | null;
   windowDurationMinutes: number | null;
   deadline: string | null;
+  priority: TaskPriority;
 }
 
 interface PostponeParams {
@@ -114,6 +115,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       p_window_start: params.windowStart,
       p_window_duration_minutes: params.windowDurationMinutes,
       p_deadline: params.deadline,
+      p_priority: params.priority,
     });
     set({ isSubmitting: false });
 

@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ErrorText } from '../../../components/ErrorText';
 import { FormInput } from '../../../components/FormInput';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { fonts } from '../../../constants/typography';
 import { useAuthStore } from '../../../hooks/useAuthStore';
 import { useGroupStore } from '../../../hooks/useGroupStore';
 import { useTaskStore } from '../../../hooks/useTaskStore';
 import { useTheme } from '../../../hooks/useTheme';
 import type { ThemePreference } from '../../../hooks/useThemeStore';
+import { withPressedOpacity } from '../../../lib/pressedStyle';
 import { computeOnTimeStats, computeOnTimeStreak } from '../../../lib/stats';
 
 const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
@@ -109,10 +111,11 @@ export default function Profile() {
         />
         {nameChanged && (
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.saveBtn,
               { backgroundColor: colors.accent },
               isSubmittingName && styles.saveBtnDisabled,
+              withPressedOpacity(pressed),
             ]}
             onPress={handleSaveName}
             disabled={isSubmittingName}
@@ -129,10 +132,11 @@ export default function Profile() {
           {THEME_OPTIONS.map((opt) => (
             <Pressable
               key={opt.value}
-              style={[
+              style={({ pressed }) => [
                 styles.themeChip,
                 { backgroundColor: colors.backgroundMuted },
                 preference === opt.value && { backgroundColor: colors.accent },
+                withPressedOpacity(pressed),
               ]}
               onPress={() => setPreference(opt.value)}
             >
@@ -167,7 +171,10 @@ export default function Profile() {
         </View>
       </View>
 
-      <Pressable style={[styles.signOutBtn, { borderColor: colors.border }]} onPress={signOut}>
+      <Pressable
+        style={({ pressed }) => [styles.signOutBtn, { borderColor: colors.border }, withPressedOpacity(pressed)]}
+        onPress={signOut}
+      >
         <Text style={[styles.signOutLabel, { color: colors.textPrimary }]}>Déconnexion</Text>
       </Pressable>
     </ScrollView>
@@ -188,30 +195,31 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   field: {
     gap: 8,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   emailValue: {
     fontSize: 16,
+    fontFamily: fonts.regular,
   },
   saveBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   saveBtnDisabled: {
     opacity: 0.5,
   },
   saveLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   themeRow: {
     flexDirection: 'row',
@@ -225,7 +233,7 @@ const styles = StyleSheet.create({
   },
   themeChipLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   statsRow: {
     flexDirection: 'row',
@@ -241,10 +249,11 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   statLabel: {
     fontSize: 11,
+    fontFamily: fonts.regular,
     textAlign: 'center',
   },
   signOutBtn: {
@@ -256,6 +265,6 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

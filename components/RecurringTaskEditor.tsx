@@ -3,9 +3,12 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { WEEKDAYS } from '../constants/weekdays';
+import { fonts } from '../constants/typography';
 import { useTheme } from '../hooks/useTheme';
 import { formatTimeFr, parseTimeString, toTimeOnlyString } from '../lib/datetime';
+import { withPressedOpacity } from '../lib/pressedStyle';
 import type { GroupMember, RecurrenceRule, Task } from '../types/database';
+import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { PickerField } from './PickerField';
 import { TaskIcon } from './TaskIcon';
@@ -82,7 +85,10 @@ export function RecurringTaskEditor({
 
   return (
     <View style={[styles.card, { borderColor: colors.border }]}>
-      <Pressable style={styles.summaryRow} onPress={() => setExpanded((e) => !e)}>
+      <Pressable
+        style={({ pressed }) => [styles.summaryRow, withPressedOpacity(pressed)]}
+        onPress={() => setExpanded((e) => !e)}
+      >
         <TaskIcon icon={task.icon} size={20} color={colors.textPrimary} />
         <View style={styles.summaryText}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>{task.title}</Text>
@@ -107,10 +113,11 @@ export function RecurringTaskEditor({
               {members.map((m) => (
                 <Pressable
                   key={m.id}
-                  style={[
+                  style={({ pressed }) => [
                     styles.chip,
                     { backgroundColor: colors.backgroundMuted },
                     assignedTo === m.user_id && { backgroundColor: colors.accent },
+                    withPressedOpacity(pressed),
                   ]}
                   onPress={() => setAssignedTo(m.user_id)}
                 >
@@ -134,10 +141,11 @@ export function RecurringTaskEditor({
               {WEEKDAYS.map((d) => (
                 <Pressable
                   key={d.value}
-                  style={[
+                  style={({ pressed }) => [
                     styles.chip,
                     { backgroundColor: colors.backgroundMuted },
                     selectedDays.includes(d.value) && { backgroundColor: colors.accent },
+                    withPressedOpacity(pressed),
                   ]}
                   onPress={() => toggleDay(d.value)}
                 >
@@ -196,30 +204,29 @@ export function RecurringTaskEditor({
           )}
 
           <View style={styles.actions}>
-            <Pressable
-              style={[
-                styles.actionBtn,
-                { backgroundColor: colors.accent },
-                !canSave && styles.actionBtnDisabled,
-              ]}
-              disabled={!canSave || isSubmitting}
+            <ActionButton
+              label="Enregistrer"
+              icon="checkmark-circle"
+              variant="filled"
               onPress={handleSave}
-            >
-              <Text style={[styles.saveLabel, { color: colors.accentContrast }]}>Enregistrer</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
+              disabled={!canSave || isSubmitting}
+              colors={colors}
+            />
+            <ActionButton
+              label="Supprimer"
+              icon="trash-outline"
+              variant="soft-danger"
               onPress={handleDelete}
               disabled={isSubmitting}
-            >
-              <Text style={[styles.actionLabel, { color: colors.danger }]}>Supprimer</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
+              colors={colors}
+            />
+            <ActionButton
+              label="Annuler"
+              icon="close-outline"
+              variant="outline"
               onPress={() => setExpanded(false)}
-            >
-              <Text style={[styles.actionLabel, { color: colors.textMuted }]}>Annuler</Text>
-            </Pressable>
+              colors={colors}
+            />
           </View>
         </View>
       )}
@@ -246,11 +253,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   subtitle: {
     marginTop: 2,
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   form: {
     padding: 12,
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   row: {
     flexDirection: 'row',
@@ -277,29 +285,14 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   hint: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   actions: {
     flexDirection: 'row',
     gap: 8,
-  },
-  actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  actionBtnDisabled: {
-    opacity: 0.5,
-  },
-  actionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  saveLabel: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

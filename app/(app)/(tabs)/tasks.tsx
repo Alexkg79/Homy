@@ -10,11 +10,13 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { RecurringTaskEditor } from '../../../components/RecurringTaskEditor';
 import { TaskInstanceCard } from '../../../components/TaskInstanceCard';
 import type { ThemeColors } from '../../../constants/theme';
+import { fonts } from '../../../constants/typography';
 import { useAuthStore } from '../../../hooks/useAuthStore';
 import { useGroupStore } from '../../../hooks/useGroupStore';
 import { useTaskStore } from '../../../hooks/useTaskStore';
 import { useTheme } from '../../../hooks/useTheme';
 import { combineDateAndTime, formatDaySectionHeader, parseDateOnly, toDateOnlyString } from '../../../lib/datetime';
+import { withPressedOpacity } from '../../../lib/pressedStyle';
 import { computeDerivedStatus, type DerivedInstanceStatus } from '../../../lib/task-status';
 import type { RecurrenceRule, TaskInstance, TaskType } from '../../../types/database';
 
@@ -68,10 +70,11 @@ function FilterRow<T extends string>({ label, options, value, onChange, colors }
           {options.map((opt) => (
             <Pressable
               key={opt.value}
-              style={[
+              style={({ pressed }) => [
                 styles.filterChip,
                 { backgroundColor: colors.backgroundMuted },
                 value === opt.value && { backgroundColor: colors.accent },
+                withPressedOpacity(pressed),
               ]}
               onPress={() => onChange(opt.value)}
             >
@@ -285,6 +288,9 @@ export default function Tasks() {
     <SectionList
       style={[styles.container, { backgroundColor: colors.background }]}
       sections={sections}
+      // Voir index.tsx : SectionList est un PureComponent, extraData force
+      // le re-render des cards quand seul `now` change (statut dérivé).
+      extraData={now}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}
@@ -299,7 +305,7 @@ export default function Tasks() {
           {recurringTasks.length > 0 && (
             <View style={[styles.manageSection, { borderBottomColor: colors.border }]}>
               <Pressable
-                style={styles.manageToggle}
+                style={({ pressed }) => [styles.manageToggle, withPressedOpacity(pressed)]}
                 onPress={() => setShowManageRecurring((s) => !s)}
               >
                 <Ionicons
@@ -370,7 +376,7 @@ const styles = StyleSheet.create({
   },
   manageToggleLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   filterRow: {
     paddingTop: 12,
@@ -378,7 +384,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     paddingHorizontal: 16,
   },
   filterChips: {
@@ -393,17 +399,18 @@ const styles = StyleSheet.create({
   },
   filterChipLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   emptyHint: {
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 8,
     paddingHorizontal: 16,
+    fontFamily: fonts.regular,
   },
   sectionHeader: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 8,

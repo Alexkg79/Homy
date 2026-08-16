@@ -1,5 +1,7 @@
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
+import { fonts } from '../constants/typography';
+
 interface FormInputProps extends TextInputProps {
   label: string;
   labelColor?: string;
@@ -46,7 +48,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   input: {
     borderWidth: 1,
@@ -54,5 +56,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    fontFamily: fonts.regular,
   },
 });

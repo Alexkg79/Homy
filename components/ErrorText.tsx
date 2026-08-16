@@ -1,5 +1,7 @@
 import { StyleSheet, Text } from 'react-native';
 
+import { fonts } from '../constants/typography';
+
 interface ErrorTextProps {
   children: string | null;
   color?: string;
@@ -18,5 +20,6 @@ export function ErrorText({ children, color = '#D64545' }: ErrorTextProps) {
 const styles = StyleSheet.create({
   text: {
     fontSize: 14,
+    fontFamily: fonts.regular,
   },
 });

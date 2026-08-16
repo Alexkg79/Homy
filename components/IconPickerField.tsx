@@ -4,6 +4,8 @@ import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { TASK_ICONS, type TaskIconName } from '../constants/taskIcons';
 import type { ThemeColors } from '../constants/theme';
+import { fonts } from '../constants/typography';
+import { withPressedOpacity } from '../lib/pressedStyle';
 
 interface IconPickerFieldProps {
   label: string;
@@ -34,9 +36,10 @@ export function IconPickerField({ label, value, onChange, colors }: IconPickerFi
     <View style={styles.container}>
       <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
       <Pressable
-        style={[
+        style={({ pressed }) => [
           styles.button,
           { borderColor: colors.border, backgroundColor: colors.inputBackground },
+          withPressedOpacity(pressed),
         ]}
         onPress={() => setOpen(true)}
       >
@@ -72,10 +75,11 @@ export function IconPickerField({ label, value, onChange, colors }: IconPickerFi
                 const isSelected = item.name === value;
                 return (
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.iconCell,
                       { backgroundColor: colors.backgroundMuted },
                       isSelected && { backgroundColor: colors.accent },
+                      withPressedOpacity(pressed),
                     ]}
                     onPress={() => handleSelect(item.name)}
                     accessibilityLabel={item.label}
@@ -102,7 +106,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   button: {
     flexDirection: 'row',
@@ -115,6 +119,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: 16,
+    fontFamily: fonts.regular,
   },
   backdrop: {
     flex: 1,
@@ -131,7 +136,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     marginBottom: 12,
   },
   gridRow: {

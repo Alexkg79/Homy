@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { fonts } from '../../../constants/typography';
 import { useTheme } from '../../../hooks/useTheme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -33,6 +34,7 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
+          fontFamily: fonts.medium,
         },
         tabBarIcon: ({ focused, color, size }) => (
           <Ionicons

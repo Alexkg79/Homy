@@ -22,6 +22,7 @@ export interface ThemeColors {
   accentContrast: string;
   danger: string;
   dangerDark: string;
+  dangerMuted: string;
   inputBackground: string;
   placeholder: string;
 }
@@ -40,6 +41,7 @@ const light: ThemeColors = {
   accentContrast: '#ffffff',
   danger: '#E24B4A',
   dangerDark: '#A32D2D',
+  dangerMuted: '#FBE7E6',
   inputBackground: '#ffffff',
   placeholder: '#9AA0A6',
 };
@@ -56,6 +58,7 @@ const dark: ThemeColors = {
   accentContrast: '#ffffff',
   danger: '#E24B4A',
   dangerDark: '#ff6b6b',
+  dangerMuted: '#3a2429',
   inputBackground: '#232326',
   placeholder: '#6b6b6b',
 };

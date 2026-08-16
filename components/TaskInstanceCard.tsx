@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { fonts } from '../constants/typography';
 import { useTheme } from '../hooks/useTheme';
 import { formatRemainingTime, formatTimeFr } from '../lib/datetime';
+import { withPressedOpacity } from '../lib/pressedStyle';
 import {
   computeDerivedStatus,
   computeProgressRatio,
@@ -11,6 +13,8 @@ import {
   type DerivedInstanceStatus,
 } from '../lib/task-status';
 import type { GroupMember, Task, TaskInstance } from '../types/database';
+import { ActionButton } from './ActionButton';
+import { ConfirmModal } from './ConfirmModal';
 import { PickerField } from './PickerField';
 import { ProgressBar } from './ProgressBar';
 import { TaskIcon } from './TaskIcon';
@@ -81,12 +85,15 @@ export function TaskInstanceCard({
   reportForm,
 }: TaskInstanceCardProps) {
   const { colors } = useTheme();
-  // Feedback visuel immédiat au tap sur la checkbox : complete_instance fait
-  // un aller-retour réseau, donc on affiche la coche remplie tout de suite
-  // plutôt que d'attendre la confirmation. Pas de logique de retour arrière
-  // en cas d'échec : même comportement qu'avant (le bouton "Terminer" ne
-  // gérait pas non plus ce cas), la checkbox appelle juste le même onComplete.
+  // Feedback visuel optimiste sur la checkbox : complete_instance fait un
+  // aller-retour réseau, donc on affiche la coche remplie tout de suite après
+  // confirmation plutôt que d'attendre la réponse. Pas de logique de retour
+  // arrière en cas d'échec, comme avant. Le tap initial (checkbox ou bouton
+  // "Terminer") ne fait qu'ouvrir la ConfirmModal — l'action réelle (et
+  // l'override visuel) n'arrive qu'au tap sur "Confirmer" dans la modale.
   const [checkedOverride, setCheckedOverride] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [refuseConfirmVisible, setRefuseConfirmVisible] = useState(false);
 
   const derived = computeDerivedStatus(instance, now);
   const isLate = derived === 'en_retard';
@@ -95,32 +102,80 @@ export function TaskInstanceCard({
   const assigneeName = assignee?.display_name ?? '—';
   const progressRatio = computeProgressRatio(instance, now);
 
-  const handleCheckboxPress = () => {
-    if (!canAct) return;
+  // Scale + fade uniquement sur la transition déclenchée par l'utilisateur
+  // (checkedOverride) : une tâche déjà "terminee" au montage (rechargée
+  // depuis le serveur) s'affiche cochée directement, sans rejouer l'anim.
+  const checkAnim = useRef(new Animated.Value(isDone ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (checkedOverride) {
+      checkAnim.setValue(0);
+      Animated.timing(checkAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }).start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkedOverride]);
+
+  const openConfirm = () => setConfirmVisible(true);
+
+  const handleConfirmComplete = () => {
+    setConfirmVisible(false);
     setCheckedOverride(true);
     onComplete();
   };
 
+  const handleCheckboxPress = () => {
+    if (!canAct) return;
+    openConfirm();
+  };
+
+  const openRefuseConfirm = () => setRefuseConfirmVisible(true);
+  const handleConfirmRefuse = () => {
+    setRefuseConfirmVisible(false);
+    onRefuse();
+  };
+
+  const isUrgent = task?.priority === 'urgente';
+
   return (
-    <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card }]}>
+    <View
+      style={[
+        styles.card,
+        { borderColor: colors.border, backgroundColor: colors.card },
+        isUrgent && { borderLeftWidth: 3, borderLeftColor: colors.danger },
+      ]}
+    >
       <View style={styles.top}>
         <View style={styles.nameRow}>
           <Pressable
             hitSlop={8}
             disabled={!canAct}
             onPress={handleCheckboxPress}
-            style={styles.checkbox}
+            style={({ pressed }) => [styles.checkbox, withPressedOpacity(pressed)]}
           >
-            <Ionicons
-              name={isDone ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={isDone ? colors.accent : colors.textMuted}
-            />
+            {isDone ? (
+              <Animated.View
+                style={{ opacity: checkAnim, transform: [{ scale: checkAnim }] }}
+              >
+                <Ionicons name="checkbox" size={20} color={colors.accent} />
+              </Animated.View>
+            ) : (
+              <Ionicons name="square-outline" size={20} color={colors.textMuted} />
+            )}
           </Pressable>
           <TaskIcon icon={task?.icon ?? '•'} size={18} color={colors.textPrimary} />
           <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
             {task?.title ?? 'Tâche'}
           </Text>
+          {isUrgent && (
+            <View style={[styles.urgentBadge, { backgroundColor: colors.dangerMuted }]}>
+              <Text style={[styles.urgentBadgeLabel, { color: colors.danger }]}>URGENT</Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.time, { color: colors.textMuted }]}>
           {formatTimeFr(new Date(instance.window_start))}
@@ -131,29 +186,38 @@ export function TaskInstanceCard({
         {buildSubtitle(assigneeName, derived, instance, now)}
       </Text>
 
-      {isPending && <ProgressBar ratio={progressRatio} color={progressColor(progressRatio)} />}
+      {isPending && (
+        <ProgressBar
+          ratio={progressRatio}
+          color={progressColor(progressRatio)}
+          pulse={derived === 'bientot_en_retard'}
+        />
+      )}
       {isLate && <ProgressBar ratio={1} color={colors.danger} />}
 
       {canAct && !isReporting && (
         <View style={styles.actions}>
-          <Pressable
-            style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
-            onPress={onComplete}
-          >
-            <Text style={[styles.actionLabel, { color: colors.accent }]}>Terminer</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
+          <ActionButton
+            label="Terminer"
+            icon="checkmark-circle"
+            variant="filled"
+            onPress={openConfirm}
+            colors={colors}
+          />
+          <ActionButton
+            label="Reporter"
+            icon="time-outline"
+            variant="outline"
             onPress={onStartReport}
-          >
-            <Text style={[styles.actionLabel, { color: colors.accent }]}>Reporter</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
-            onPress={onRefuse}
-          >
-            <Text style={[styles.actionLabel, { color: colors.danger }]}>Refuser</Text>
-          </Pressable>
+            colors={colors}
+          />
+          <ActionButton
+            label="Refuser"
+            icon="close-circle"
+            variant="soft-danger"
+            onPress={openRefuseConfirm}
+            colors={colors}
+          />
         </View>
       )}
 
@@ -195,26 +259,42 @@ export function TaskInstanceCard({
             </Text>
           )}
           <View style={styles.actions}>
-            <Pressable
-              style={[
-                styles.actionBtn,
-                { backgroundColor: colors.backgroundMuted },
-                !reportForm.orderValid && styles.actionBtnDisabled,
-              ]}
-              disabled={!reportForm.orderValid}
+            <ActionButton
+              label="Confirmer"
+              icon="checkmark-circle"
+              variant="filled"
               onPress={reportForm.onConfirm}
-            >
-              <Text style={[styles.actionLabel, { color: colors.accent }]}>Confirmer</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.backgroundMuted }]}
+              disabled={!reportForm.orderValid}
+              colors={colors}
+            />
+            <ActionButton
+              label="Annuler"
+              icon="close-outline"
+              variant="outline"
               onPress={reportForm.onCancel}
-            >
-              <Text style={[styles.actionLabel, { color: colors.accent }]}>Annuler</Text>
-            </Pressable>
+              colors={colors}
+            />
           </View>
         </View>
       )}
+
+      <ConfirmModal
+        visible={confirmVisible}
+        title="Terminer cette tâche ?"
+        message={task?.title}
+        onConfirm={handleConfirmComplete}
+        onCancel={() => setConfirmVisible(false)}
+      />
+      <ConfirmModal
+        visible={refuseConfirmVisible}
+        title="Refuser cette tâche ?"
+        message={task?.title}
+        confirmLabel="Refuser"
+        confirmIcon="close-circle"
+        confirmVariant="soft-danger"
+        onConfirm={handleConfirmRefuse}
+        onCancel={() => setRefuseConfirmVisible(false)}
+      />
     </View>
   );
 }
@@ -245,30 +325,30 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     flexShrink: 1,
+  },
+  urgentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  urgentBadgeLabel: {
+    fontSize: 9,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.5,
   },
   time: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   sub: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   actions: {
     flexDirection: 'row',
     gap: 8,
-  },
-  actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  actionBtnDisabled: {
-    opacity: 0.5,
-  },
-  actionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   reportForm: {
     gap: 10,
@@ -277,5 +357,6 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
 });

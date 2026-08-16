@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ErrorText } from '../../../components/ErrorText';
 import { GroupSwitcherHeader } from '../../../components/GroupSwitcherHeader';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { fonts } from '../../../constants/typography';
 import { useAuthStore } from '../../../hooks/useAuthStore';
 import { useGroupStore } from '../../../hooks/useGroupStore';
 import { useTaskStore } from '../../../hooks/useTaskStore';
 import { useTheme } from '../../../hooks/useTheme';
 import { computeOnTimeStats } from '../../../lib/stats';
+import { withPressedOpacity } from '../../../lib/pressedStyle';
 import type { GroupMember } from '../../../types/database';
 
 export default function GroupTab() {
@@ -145,10 +147,11 @@ export default function GroupTab() {
         )}
         ListFooterComponent={
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.leaveBtn,
               { borderColor: colors.danger },
               isLeaving && styles.leaveBtnDisabled,
+              withPressedOpacity(pressed),
             ]}
             onPress={handleLeave}
             disabled={isLeaving}
@@ -177,10 +180,11 @@ const styles = StyleSheet.create({
   inviteLabel: {
     marginTop: 12,
     fontSize: 13,
+    fontFamily: fonts.regular,
   },
   inviteCode: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     letterSpacing: 4,
   },
   statsCard: {
@@ -194,17 +198,19 @@ const styles = StyleSheet.create({
   },
   statsTitle: {
     fontSize: 13,
+    fontFamily: fonts.regular,
   },
   statsValue: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   statsHint: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   sectionHeader: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     paddingHorizontal: 24,
     paddingBottom: 4,
   },
@@ -224,14 +230,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   memberName: {
     fontSize: 16,
+    fontFamily: fonts.regular,
     flex: 1,
   },
   youTag: {
     fontSize: 12,
+    fontFamily: fonts.regular,
   },
   leaveBtn: {
     marginTop: 24,
@@ -246,6 +254,6 @@ const styles = StyleSheet.create({
   },
   leaveLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

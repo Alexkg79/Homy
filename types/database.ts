@@ -34,6 +34,7 @@ type GroupMemberRow = {
 };
 
 export type TaskType = 'ponctuelle' | 'recurrente' | 'rotation';
+export type TaskPriority = 'normale' | 'urgente';
 
 /**
  * Forme du jsonb `tasks.recurrence_rule` pour 'recurrente'/'rotation' (null
@@ -59,6 +60,7 @@ type TaskRow = {
   icon: string;
   type: TaskType;
   recurrence_rule: RecurrenceRule | null;
+  priority: TaskPriority;
   created_by: string;
   created_at: string;
 };
@@ -168,6 +170,7 @@ export type Database = {
           p_window_start: string | null;
           p_window_duration_minutes: number | null;
           p_deadline: string | null;
+          p_priority: TaskPriority;
         };
         Returns: TaskRow;
       };

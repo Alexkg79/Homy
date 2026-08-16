@@ -3,8 +3,10 @@ import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { fonts } from '../constants/typography';
 import { useGroupStore } from '../hooks/useGroupStore';
 import { useTheme } from '../hooks/useTheme';
+import { withPressedOpacity } from '../lib/pressedStyle';
 
 interface GroupSwitcherHeaderProps {
   /** Chaque écran garde son offset de safe-area actuel (insets.top + X). */
@@ -43,7 +45,11 @@ export function GroupSwitcherHeader({ paddingTop, trailing }: GroupSwitcherHeade
     <View style={[styles.header, { paddingTop, borderBottomColor: colors.border }]}>
       <View style={styles.triggerColumn}>
         <Text style={[styles.brand, { color: colors.textMuted }]}>HOMY</Text>
-        <Pressable style={styles.trigger} onPress={() => setOpen(true)} hitSlop={8}>
+        <Pressable
+          style={({ pressed }) => [styles.trigger, withPressedOpacity(pressed)]}
+          onPress={() => setOpen(true)}
+          hitSlop={8}
+        >
           <View style={[styles.avatar, { backgroundColor: colors.backgroundMuted }]}>
             <Text style={[styles.avatarInitial, { color: colors.accent }]}>
               {activeGroup?.name.charAt(0).toUpperCase() ?? '?'}
@@ -70,7 +76,7 @@ export function GroupSwitcherHeader({ paddingTop, trailing }: GroupSwitcherHeade
             {groups.map((g) => (
               <Pressable
                 key={g.id}
-                style={styles.row}
+                style={({ pressed }) => [styles.row, withPressedOpacity(pressed)]}
                 onPress={() => handleSelect(g.id)}
               >
                 <View style={[styles.avatar, { backgroundColor: colors.backgroundMuted }]}>
@@ -89,7 +95,10 @@ export function GroupSwitcherHeader({ paddingTop, trailing }: GroupSwitcherHeade
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            <Pressable style={styles.row} onPress={handleAddGroup}>
+            <Pressable
+              style={({ pressed }) => [styles.row, withPressedOpacity(pressed)]}
+              onPress={handleAddGroup}
+            >
               <View style={[styles.avatar, { backgroundColor: colors.backgroundMuted }]}>
                 <Ionicons name="add" size={18} color={colors.accent} />
               </View>
@@ -118,9 +127,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   brand: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    letterSpacing: 1.8,
   },
   trigger: {
     flexDirection: 'row',
@@ -137,11 +146,11 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   groupName: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     flexShrink: 1,
   },
   backdrop: {
@@ -166,7 +175,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     flexShrink: 1,
   },
   divider: {

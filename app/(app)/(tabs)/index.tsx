@@ -8,6 +8,7 @@ import { ErrorText } from '../../../components/ErrorText';
 import { GroupSwitcherHeader } from '../../../components/GroupSwitcherHeader';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { TaskInstanceCard } from '../../../components/TaskInstanceCard';
+import { fonts } from '../../../constants/typography';
 import { useAuthStore } from '../../../hooks/useAuthStore';
 import { useGroupStore } from '../../../hooks/useGroupStore';
 import { useTaskStore } from '../../../hooks/useTaskStore';
@@ -19,6 +20,7 @@ import {
   toDateOnlyString,
 } from '../../../lib/datetime';
 import { registerForPushNotifications } from '../../../lib/notifications';
+import { withPressedOpacity } from '../../../lib/pressedStyle';
 import { computeDerivedStatus } from '../../../lib/task-status';
 import type { GroupMember, TaskInstance } from '../../../types/database';
 
@@ -264,6 +266,11 @@ export default function Accueil() {
     <SectionList
       style={[styles.container, { backgroundColor: colors.background }]}
       sections={sections}
+      // SectionList est un PureComponent : sans extraData, un item déjà
+      // rendu ne se re-rend pas quand seul `now` change (tick périodique),
+      // même si son statut dérivé (à venir -> en cours -> en retard)
+      // devrait changer. `now` force le re-render de toutes les cards.
+      extraData={now}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}
@@ -302,7 +309,11 @@ export default function Accueil() {
               <View style={styles.trailingRow}>
                 <Ionicons name="notifications-outline" size={22} color={colors.textMuted} />
                 <Pressable
-                  style={[styles.addBtn, { backgroundColor: colors.accent }]}
+                  style={({ pressed }) => [
+                    styles.addBtn,
+                    { backgroundColor: colors.accent },
+                    withPressedOpacity(pressed),
+                  ]}
                   hitSlop={8}
                   onPress={() => router.push('/(app)/task-create')}
                 >
@@ -324,7 +335,10 @@ export default function Accueil() {
       ListFooterComponent={
         doneToday.length > 0 ? (
           <View style={styles.doneSection}>
-            <Pressable style={styles.doneToggle} onPress={() => setShowDone((s) => !s)}>
+            <Pressable
+              style={({ pressed }) => [styles.doneToggle, withPressedOpacity(pressed)]}
+              onPress={() => setShowDone((s) => !s)}
+            >
               <Ionicons
                 name={showDone ? 'chevron-down' : 'chevron-forward'}
                 size={14}
@@ -366,17 +380,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     paddingHorizontal: 16,
+    fontFamily: fonts.regular,
   },
   groupSectionHeader: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 4,
   },
   sectionHeader: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 8,
@@ -393,7 +408,7 @@ const styles = StyleSheet.create({
   },
   doneToggleLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   doneList: {
     gap: 0,

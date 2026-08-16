@@ -16,23 +16,34 @@ export default function AppLayout() {
       }}
     >
       {/*
-        presentation: 'modal' seul (sans `animation` explicite) : la
-        transition modale native (slide-up géré nativement par
-        react-native-screens, header inclus) est déjà symétrique à l'entrée
-        et à la sortie sur iOS et Android. Ajouter `animation:
-        'slide_from_bottom'` par-dessus désynchronise le header du reste de
-        la carte au moment du pop (goBack) — le header disparaît d'un coup
-        au lieu de glisser avec le contenu — donc on laisse la présentation
-        modale seule piloter toute la transition.
+        presentation: 'modal' seul ne suffit PAS pour une animation slide
+        symétrique sur Android : contrairement à iOS, `stackAnimation` sur
+        react-native-screens (4.16, vérifié dans Screen.kt/ScreenStack.kt)
+        est indépendant de `stackPresentation` et vaut DEFAULT par défaut à
+        l'entrée comme à la sortie — d'où la sortie qui "tombe" au lieu de
+        glisser. Il faut donc `animation: 'slide_from_bottom'` explicite.
+        Ça désynchronise en revanche le header natif du reste de la carte au
+        pop (le header disparaît d'un coup) — on désactive donc le header
+        natif ici (headerShown: false) et chaque écran dessine son propre
+        titre dans son contenu (voir ModalHeader), qui fait alors partie de
+        la même vue animée que le reste de la carte.
       */}
       <Stack.Screen
         name="onboarding"
-        options={{ title: 'Rejoindre un groupe', presentation: 'modal' }}
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
       />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="task-create"
-        options={{ title: 'Nouvelle tâche', presentation: 'modal' }}
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
       />
     </Stack>
   );
