@@ -59,6 +59,11 @@ function toTimeString(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Durée en minutes entre deux horaires, dérivée plutôt que saisie (voir handleSubmit). */
+function diffMinutes(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / 60_000);
+}
+
 export default function TaskCreate() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -79,7 +84,6 @@ export default function TaskCreate() {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [date, setDate] = useState(new Date());
   const [windowStartTime, setWindowStartTime] = useState(withTime(18, 0));
-  const [durationMinutes, setDurationMinutes] = useState('60');
   const [deadlineTime, setDeadlineTime] = useState(withTime(21, 0));
 
   const toggleDay = (value: number) => {
@@ -88,7 +92,6 @@ export default function TaskCreate() {
     );
   };
 
-  const durationValid = /^\d+$/.test(durationMinutes) && Number(durationMinutes) > 0;
   const windowOrderValid =
     type === 'ponctuelle'
       ? combineDateAndTime(date, deadlineTime) >= combineDateAndTime(date, windowStartTime)
@@ -98,7 +101,6 @@ export default function TaskCreate() {
     title.trim().length > 0 &&
     icon.trim().length > 0 &&
     assignedTo !== null &&
-    durationValid &&
     windowOrderValid &&
     (type === 'ponctuelle' || selectedDays.length > 0);
 
@@ -109,6 +111,8 @@ export default function TaskCreate() {
     clearError();
 
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const windowStart = combineDateAndTime(date, windowStartTime);
+    const deadline = combineDateAndTime(date, deadlineTime);
     const success =
       type === 'ponctuelle'
         ? await createTask({
@@ -119,9 +123,9 @@ export default function TaskCreate() {
             assignedTo,
             recurrenceRule: null,
             date: toDateOnlyString(date),
-            windowStart: combineDateAndTime(date, windowStartTime).toISOString(),
-            windowDurationMinutes: Number(durationMinutes),
-            deadline: combineDateAndTime(date, deadlineTime).toISOString(),
+            windowStart: windowStart.toISOString(),
+            windowDurationMinutes: diffMinutes(windowStart, deadline),
+            deadline: deadline.toISOString(),
             priority,
           })
         : await createTask({
@@ -133,7 +137,7 @@ export default function TaskCreate() {
             recurrenceRule: {
               days_of_week: selectedDays,
               window_start_time: toTimeString(windowStartTime),
-              window_duration_minutes: Number(durationMinutes),
+              window_duration_minutes: diffMinutes(windowStartTime, deadlineTime),
               deadline_time: toTimeString(deadlineTime),
               timezone,
             },
@@ -299,7 +303,7 @@ export default function TaskCreate() {
         )}
 
         <PickerField
-          label="Début de fenêtre"
+          label="Début de la tâche"
           value={windowStartTime}
           mode="time"
           onChange={setWindowStartTime}
@@ -308,20 +312,8 @@ export default function TaskCreate() {
           backgroundColor={colors.inputBackground}
           valueColor={colors.textPrimary}
         />
-        <FormInput
-          label="Durée disponible (minutes)"
-          value={durationMinutes}
-          onChangeText={setDurationMinutes}
-          placeholder="60"
-          keyboardType="number-pad"
-          labelColor={colors.textPrimary}
-          borderColor={colors.border}
-          backgroundColor={colors.inputBackground}
-          textColor={colors.textPrimary}
-          placeholderColor={colors.placeholder}
-        />
         <PickerField
-          label="Deadline"
+          label="Fin de la tâche"
           value={deadlineTime}
           mode="time"
           onChange={setDeadlineTime}

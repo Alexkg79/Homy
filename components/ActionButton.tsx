@@ -65,6 +65,15 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 13,
+    lineHeight: 16,
     fontFamily: fonts.semiBold,
+    // Plus Jakarta Sans (comme la plupart des fonts custom sur Android) ajoute
+    // un padding vertical interne à la boîte de ligne qui décale le glyphe
+    // visible sous le centre réel de la Text box : alignItems: 'center' seul
+    // centre alors la boîte, pas le texte qu'on voit, d'où le décalage avec
+    // l'icône (RN Android uniquement, includeFontPadding/textAlignVertical
+    // ignorés sans effet sur iOS).
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

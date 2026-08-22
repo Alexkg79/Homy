@@ -1,7 +1,7 @@
 import type { TaskInstance, TaskInstanceStatus } from '../types/database';
 
 export type DerivedInstanceStatus =
-  | Exclude<TaskInstanceStatus, 'a_faire' | 'en_retard'>
+  | Exclude<TaskInstanceStatus, 'a_faire' | 'en_retard' | 'reportee'>
   | 'a_venir'
   | 'en_cours'
   | 'bientot_en_retard'
@@ -26,12 +26,18 @@ function windowBoundsMs(instance: WindowInstance): { startMs: number; deadlineMs
  * toute façon recalculé en continu par l'UI. Ne modifie jamais `status` en
  * base — 'en_retard' n'est ici qu'un label d'affichage tant qu'aucun job
  * planifié (phase 4) n'écrit le vrai statut.
+ *
+ * 'reportee' est traité comme 'a_faire' ici : reporter une tâche lui donne
+ * une nouvelle fenêtre (window_start/deadline), donc son statut affichable
+ * doit être recalculé dessus comme n'importe quelle tâche active, plutôt que
+ * de rester figé sur le label 'reportee' (qui masquait la jauge et empêchait
+ * une tâche reportée de repasser 'en_retard').
  */
 export function computeDerivedStatus(
   instance: Pick<TaskInstance, 'status' | 'window_start' | 'deadline'>,
   now: Date = new Date()
 ): DerivedInstanceStatus {
-  if (instance.status !== 'a_faire') {
+  if (instance.status !== 'a_faire' && instance.status !== 'reportee') {
     return instance.status;
   }
 

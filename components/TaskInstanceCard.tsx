@@ -22,7 +22,6 @@ import { TaskIcon } from './TaskIcon';
 const DONE_LABELS: Partial<Record<DerivedInstanceStatus, string>> = {
   terminee: 'terminée',
   refusee: 'refusée',
-  reportee: 'reportée',
 };
 
 /** "Alex • il reste 1h32" / "Alex • en retard" / "Alex • terminée", style mockup. */

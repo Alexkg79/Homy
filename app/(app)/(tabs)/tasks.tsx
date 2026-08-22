@@ -46,10 +46,16 @@ function matchesStatusFilter(
   filter: StatusFilter
 ): boolean {
   if (filter === 'all') return true;
-  const derived: DerivedInstanceStatus = computeDerivedStatus(instance, now);
-  if (filter === 'a_faire') {
+  // 'a_faire' et 'reportee' filtrent sur le statut brut : depuis le fix de la
+  // jauge, les deux calculent le même statut dérivé actif (a_venir/en_cours/
+  // bientot_en_retard/en_retard) via computeDerivedStatus, donc seul le
+  // statut brut permet encore de les distinguer dans ce filtre.
+  if (filter === 'a_faire' || filter === 'reportee') {
+    if (instance.status !== filter) return false;
+    const derived: DerivedInstanceStatus = computeDerivedStatus(instance, now);
     return derived === 'a_venir' || derived === 'en_cours' || derived === 'bientot_en_retard';
   }
+  const derived: DerivedInstanceStatus = computeDerivedStatus(instance, now);
   return derived === filter;
 }
 
